@@ -1,120 +1,345 @@
 ---
-title: "My Final Project Template"
-author: Your name here
-subtitle: Subtitle here if desired
+title: "Visualizing the impact of hurricanes on mangroves over time"
+author: Isabel Liston
 date: today
 date-format: long
+format: 
+  html:
+    code-fold: true
 ---
 
-# Introduction
+# Introduction:
 
-\[\~ 200 words\]
+Mangrove trees are an important aspect of many coastal ecosystems. Often, these areas are also impacted by hurricanes, therefore it is beneficial to understand how hurricanes damage mangrove trees and how long it takes trees to recover from said damage. Hurricanes impact mangroves through “…three primary mechanisms: wind damage, storm surges, and sediment deposition” (Smith III et al., 2009, p. 24). The wind can damage the trunk, branches and leaves, the storm surges can uproot or knock over the mangrove tree, finally, “…deposited materials interfere with root and soil gas exchange leading to eventual death of the trees (Smith III et al., 2009, p. 24). With knowledge of how hurricanes impact mangroves, we can look towards quantifying the response of mangrove forests to these impacts. To do this, mangroves must be studied over time and at different areas within a hurricane’s impact area. This leads us to the data set used in this project, following Hurricane Andrew in 1992 permanent study plots were established in the Everglades region of southern Florida. More were added later to compare modern observations to historic measurements, in total there are twenty-three plots with data spanning 1992-2011. The goal of this project is to visualize various aspects of how individual mangroves, different mangrove species and the plots overall respond to hurricanes over time.
 
-Clearly stated background and questions / hypotheses / problems being addressed. Sets up the analysis in an interesting and compelling way. Include figures if you like.
+# Materials and Methods:
 
-# Materials and methods
+## Data Sources
 
-\[\~ 200 words\]
+-   United States Geological Survey’s Wetland and Aquatic Research Center
+    -   <https://doi.org/10.5066/P13DONMU>
+-   The hurricaneexposure and hurricaneexposuredata packages
+    -   <https://github.com/geanders/hurricaneexposure>
+    -   <https://github.com/geanders/hurricaneexposuredata>
+-   The spData Package
+    -   <https://cran.r-project.org/package=spData>
 
-Narrative: Clear narrative description of the data sources and methods. Includes data from at least two sources that were integrated / merged in R.
+## Methods
 
-Code: The code associated with the project is well organized and easy to follow. Demonstrates mastery of R graphics and functions.
+To begin this project, I loaded all the necessary libraries, listed below, and imported the data sets. I then set up the study area using a bounding box, cropped the us_states data using this bounding box to get a polygon of the study area and filtered the us_states data to just the state of Florida for a scope of reference. For the Everglades Mangrove Data, I removed the “NA” values for DBH, grouped by Plot ID, reformatted the date to be compatible with R, arranged in date order then transformed the dataframe into a spatial object for mapping purposes. I also used the distinct() function to make a list of the 23 plots with their unique IDs, their sitename and their geometry. Finally, I mapped the tracks of the hurricanes that passed through the study area between 1992 and 2011 using the hurricane exposure package. I extracted the point information of the hurricane tracks and converted it to a spatial object. I then cropped this down to Florida and further cropped it to just the study area.
 
-Data: The underlying data are publicly accessible via the web and downloaded/accessed within the Rmd script. If you want to use your own data, you must make it available on a website (e.g. Figshare) so that others are able to re-run your code.
+### Load libraries
 
-You can do bullets like this:
-
--   The first most important thing
--   The second most important thing
--   The third most important thing
-
-You can do numbers like this:
-
-1.  The first most important thing
-2.  The second most important thing
-3.  The third most important thing
-
-See <http://rmarkdown.rstudio.com/> for all the amazing things you can do.
-
-Here's my first code chunk.
-
-```{r}
-x=3+4
-```
-
-Refer to output in your narrative like this: x=`r x` .
-
-Load any required packages in a code chunk (you may need to install some packages):
-
-```{r, message=F, warning=F}
+```{r, warning = FALSE, message = FALSE}
+library(readr)
 library(tidyverse)
+library(ggplot2)
+library(drat)
+addRepo("geanders")
+update.packages("hurricaneexposure")
+update.packages("hurricaneexposuredata")
+library(hurricaneexposure)
+library(hurricaneexposuredata)
+library(sf)
+library(spData)
 library(leaflet)
+library(foreach)
+library(doParallel)
+library(lubridate)
+library(grid)
+library(gtable)
+library(gridExtra)
+library(png)
+install.packages("kableExtra")
 library(kableExtra)
-library(htmlwidgets)
-library(widgetframe)
-knitr::opts_chunk$set(widgetframe_widgets_dir = 'widgets' ) 
-knitr::opts_chunk$set(cache=TRUE)  # cache the results for quick compiling
 ```
 
-## Download and clean all required data
+### Load data
 
-```{r}
-n=20
-data=data.frame(x=runif(n,-180,180),
-                y=runif(n,-60,60),
-                size = runif(n, 5, 20),
-                category = factor(
-                  sample(letters[1:5], n, replace = TRUE)
-                  ),
-                value = rnorm(n))
+```{r, warning = FALSE, message = FALSE}
+data("us_states")
+data("hurr_tracks")
+EVG_raw_data <- read.csv("data/Everglades_Mangrove_Vegetation_plot_data.csv")
 ```
 
-```{r, results='asis'}
-data %>% 
-  slice(1:10) %>% #show only 1:n rows
-  kable(digits=2,align="c")%>% #make table and round to two digits
-  kable_styling(bootstrap_options = 
-                  c("striped", "hover", "condensed", "responsive")) #apply other formatting
+### Clean up data
+
+```{r, warning = FALSE, message = FALSE}
+#create the study area bounding box
+bbox_coords <- c(-81.2133, 25.5831,-80.9134, 25.1589)
+
+#create a polygon from the bounding box
+bbox_polygon <- st_as_sf(st_sfc(st_polygon(list(matrix(c(
+   bbox_coords[1], bbox_coords[2],  
+   bbox_coords[3], bbox_coords[2],
+   bbox_coords[3], bbox_coords[4],  
+   bbox_coords[1], bbox_coords[4],
+   bbox_coords[1], bbox_coords[2]   
+), ncol = 2, byrow = TRUE))), crs = 4269)) #used EPSG 4269 to match us_states 
+
+#set the study coordinate reference system
+study_crs <- st_crs(bbox_polygon)
+
+#create the study area polygon 
+study_area <- st_crop(us_states, bbox_polygon)
+
+#filter the "us_states" data to just Florida
+FL_state <- filter(us_states, NAME == "Florida")
+
+#tidy everglades mangrove data
+EVG_tidy <- EVG_raw_data %>%
+              subset(dbh_cm != "NA") %>%
+              group_by(plot_ID) %>%
+              mutate(across(contains("date"), ~ mdy(.))) %>%
+              arrange(., date)
+
+#convert tidies mangrove data into an st object             
+EVG_tidy_spat <- EVG_tidy %>%
+                  st_as_sf(coords = c("longitude", "latitude"), 
+                           crs = study_crs)
+
+#gather the distinct values of plot_ID, site name and geometry
+EVG_plots <- EVG_tidy_spat %>%
+              distinct(plot_ID, site, geometry)
+
+#map_tracks for the hurricanes passing through the study area 
+hurr_paths <- map_tracks(storms = c("Andrew-1992","Irene-1999",
+                                    "Katrina-2005"))
+
+#extract the specific point data from the hurr_paths object,
+#convert it into a st object, and crop it to fit the state of Florida
+hurr_paths_spat <- hurr_paths[["layers"]][[2]][["data"]] %>%
+                    st_as_sf(.,coords = c("longitude", "latitude"), 
+                              crs = study_crs) %>%
+                    st_crop(.,FL_state)
+
+#crop hurr_paths to just the study area
+study_area_hurr_paths <- st_crop(hurr_paths_spat, study_area)
 ```
 
-Add any additional processing steps here.
+# Results:
 
-# Results
+## Map the spatial distribution of study plots
 
-\[\~200 words\]
-
-Tables and figures (maps and other graphics) are carefully planned to convey the results of your analysis. Intense exploration and evidence of many trials and failures. The author looked at the data in many different ways before coming to the final presentation of the data.
-
-Show tables, plots, etc. and describe them.
-
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
+```{r, warning = FALSE, message = FALSE}
+if (knitr::is_html_output()) {
+plot_dist <- leaflet(EVG_tidy_spat)%>%
+                addTiles()%>%
+                fitBounds(., lng1 = -81.2133, lat1 = 25.5831,
+                          lng2 = -80.9134, lat2 = 25.1589)%>%
+                addMarkers(data = EVG_plots, popup = EVG_plots$site)
+plot_dist
+} else {
+  plot_dist_static <- ggplot()+
+                    geom_sf(data = study_area)+
+                    geom_sf(data = EVG_plots, aes(color = plot_ID))+
+                    theme(axis.text.x = element_text(angle = 270, vjust = 0.5, 
+                                                     hjust=1))+
+                    labs(title = "Study Area with Study Plots", 
+                         color = "Plot ID")+
+                    theme(plot.title = element_text(hjust = 0.5))
+  plot_dist_static}
 ```
 
-```{r}
-data %>% 
-  ggplot(aes(x=x,y=y,col=category))+
-  geom_point()
+## Plot the path of hurricanes in the context of the study area and plots
+
+```{r, warning = FALSE, message = FALSE}
+#make a map showing Florida, the study area and the hurricane paths
+state_view <- ggplot() +
+                geom_sf(data = FL_state) +
+                geom_sf(data = study_area, fill = "green")+
+                geom_sf(data = hurr_paths_spat, aes(color = storm_id))+ 
+                labs(title = "Florida with the Study Area and Hurricane Paths", 
+                     color = "Storm ID")+
+                theme(plot.title = element_text(hjust = 0.5))
+state_view
 ```
 
-### Dygraphs Example
+```{r, warning = FALSE, message = FALSE}
+#make a map showing the study area, cropped hurricane paths and study plots  
+study_area_view <- ggplot()+
+                    geom_sf(data = study_area)+
+                    geom_sf(data = study_area_hurr_paths, aes(color = storm_id))+
+                    geom_sf(data = EVG_plots, shape = 15)+
+                    theme(axis.text.x = element_text(angle = 270, vjust = 0.5, 
+                                                     hjust=1))+
+                    labs(title = "Study Area with Hurricane Paths and Study Plots", 
+                         color = "Storm ID")+
+                    theme(plot.title = element_text(hjust = 0.5))
 
-```{r}
-library(dygraphs)
-dygraph(nhtemp, main = "New Haven Temperatures") |> 
-  dyRangeSelector(dateWindow = c("1920-01-01", "1960-01-01")) 
+study_area_view
 ```
 
-# Conclusions
+## Plot species make up of each plot over time
 
-\[\~200 words\]
+```{r, warning = FALSE, message = FALSE}
+#make a cluster and register it for parallel processing
+cl <- makeCluster(4)
+registerDoParallel(cl)
 
-Clear summary adequately describing the results and putting them in context. Discussion of further questions and ways to continue investigation.
+#factor plots for use in foreach loop
+sites <- factor(EVG_tidy$plot_ID)
 
-# References
+#create foreach loop that calculates plot make-up, 
+#then makes and saves a bar chart 
+#representing the quantity fo each species overtime
+plot_makeup_list <- foreach(i = levels(sites), 
+                   .packages = c("dplyr", "ggplot2")) %dopar% {
 
-All sources are cited in a consistent manner
+                  plot_makeup <- EVG_tidy %>% 
+                                 filter(plot_ID == i) %>%
+                                 group_by(plot_ID, date, scientific_name) %>%
+                                 summarize(individual_count = n(), 
+                                           .groups = "drop")
+  
+                  bar_chart <- ggplot(data = plot_makeup, 
+                                      aes(fill = scientific_name, 
+                                          y = individual_count, 
+                                          x = date)) +
+                               geom_bar(position = "fill", 
+                                        stat = "identity")+ 
+                               labs(x = "Date", y = "Proportion of Species", 
+                                    fill = "Scientific Name") +
+                               ggtitle(paste("Plot", i))+
+                               theme(plot.title = element_text(hjust = 0.5))
+  
+                   file_name <- paste("plot_", i, ".png", sep = "")
+  
+                   ggsave(filename = file_name, plot = bar_chart, 
+                          width = 10, height = 8, units = "in")
+  
+                   return(file_name)}
+
+stopCluster(cl)
+
+#convert saved .png files to graphic objects (grobs) for use with grid.arrange
+grob_list <- lapply(plot_makeup_list, function(file_name) {
+  img <- readPNG(file_name)        
+  raster_grob <- rasterGrob(img)   
+  return(raster_grob)})
+
+#arrange grobs in a grid and save image 
+all_plots <- grid.arrange(grobs = grob_list, ncol = 4, nrow = 6)
+
+ggsave(filename = "all_plots.png", plot = all_plots, 
+       width = 20, height = 15, units = "in")
+```
+
+## Find and visualize the directly impacted plot/plots
+
+### Find the plot/ plots that fall in the direct line of a hurricane
+```{r, message = FALSE, warning = FALSE}
+# Transform to a projected coordinate system (NAD83 / UTM Zone 17N)
+EVG_plots_trans <- st_transform(EVG_plots, crs = 32617) 
+study_area_hurr_paths_trans<- st_transform(study_area_hurr_paths, crs = 32617)
+study_area_trans <- st_transform(study_area, crs = 32617) 
+
+# Create buffer for EVG_plots and hurr_paths (1 mile = 1609.34 meters)
+EVG_plots_buffer <- st_buffer(EVG_plots_trans, dist = (1609.34*0.5))
+study_area_hurr_paths_buffer <- st_buffer(study_area_hurr_paths_trans, 
+                                          dist = (1609.34))
+
+# Find the intersection of the buffers
+overlap <- st_intersection(EVG_plots_buffer, study_area_hurr_paths_buffer)
+
+overlap_table<-overlap %>%
+                  st_drop_geometry%>%
+                  kbl() %>%
+                  kable_minimal()
+
+overlap_table
+
+#Visualize the intersection
+ggplot()+
+  geom_sf(data = study_area_trans)+
+  geom_sf(data = study_area_hurr_paths_buffer, aes(color = storm_id))+
+  geom_sf(data = study_area_hurr_paths_trans, aes(color = storm_id))+
+  geom_sf(data = EVG_plots_buffer, aes(fill = site))+
+  geom_sf(data = overlap, aes(fill = site), color= "yellow")+
+  labs(title = "Intersection of Study Plots and Hurricane Paths",
+       fill = "Site Name", color = "Storm ID",
+       caption = "Study Plots have a 1/2 mile Buffer, Hurricane Paths have a 1 mile Buffer")+
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.caption = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 270, vjust = 0.5, hjust=1))
+```
+
+### Plot the average DBH of each species in the impacted plot/plots over time
+
+```{r,warning = FALSE, message = FALSE}
+#filter the mangrove data based on the overlap results, 
+#the first overlap plot is BRU
+plot_BRU <- EVG_tidy_spat %>%
+              filter(plot_ID == "BRU") %>%
+              subset(status != "dead") %>%
+              group_by(date, scientific_name) %>%
+              mutate("avg_species_dbh_cm" = mean(dbh_cm)) #averaged to minimize 
+                                                          #visual noise
+#plot the change in average Diameter at Breast Height (DBH) for each species over time
+ggplot(plot_BRU) +
+  geom_point(aes(x = date, y = avg_species_dbh_cm, color = scientific_name)) +
+  geom_line(aes(x = date, y = avg_species_dbh_cm, color = scientific_name, 
+                group = scientific_name)) +
+  geom_vline(xintercept = as.Date("1999-10-15"), color = "gray", 
+             linetype = "dashed", linewidth = 1) +
+  annotate("text",x = as.Date("1999-10-15"), y = 0, 
+            label = "Hurricane Irene", 
+            color = "black")+
+  labs(title = "Change in Average DBH per Species in Plot BRU", 
+       x = "Date", y = "Average DBH in cm", color = "Scientific Name")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme_minimal()
+```
+
+```{r, warning = FALSE, message = FALSE}
+#filter the mangrove data based on the overlap results again,
+#the second overlap plot is BRM
+plot_BRM <- EVG_tidy_spat %>%
+               filter(plot_ID == "BRM") %>%
+               subset(status != "dead") %>%
+               group_by(date, scientific_name) %>%
+               mutate("avg_species_dbh_cm" = mean(dbh_cm))
+
+#plot the change in average DBH for each species over time  
+ggplot(plot_BRM) +
+  geom_point(aes(x = date, y = avg_species_dbh_cm, color = scientific_name)) +
+  geom_line(aes(x = date, y = avg_species_dbh_cm, color = scientific_name, 
+                group = scientific_name)) +
+   geom_vline(xintercept = as.Date("1999-10-15"), color = "gray", 
+             linetype = "dashed", linewidth = 1) +
+  annotate("text",x = as.Date("1999-10-15"), y = 0, 
+            label = "Hurricane Irene", 
+            color = "black")+
+  geom_vline(xintercept = as.Date("2005-08-26"), color = "gray", 
+             linetype = "dashed", linewidth = 1) +
+  annotate("text",x = as.Date("2005-08-26"), y = 0, 
+            label = "Hurricane Katrina", 
+            color = "black")+
+  xlim(min(plot_BRM$date), max(plot_BRM$date) + 365) +
+  labs(title = "Change in Average DBH per Species in Plot BRM", 
+       x = "Date", y = "Average DBH in cm", color = "Scientific Name")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme_minimal()
+```
+
+## Results (Text):
+
+Through this project I was able to plot the location of the twenty-three permanent plots in the context of the state of Florida in an interactive map. Using a static map, I visualized the study area within the state of Florida and the various hurricanes that have passed through the area of interest during the period of study. I also made a map of the plots within the study area and the hurricane paths at that scale. Furthermore, I used bar charts that had the proportion of each species observed on each study date to visualize the species make-up of each plot over time. These plots are useful for understanding which species thrive at different hurricane exposure levels and for comparing how the species make-up changes through time. Using a buffer I was able to determine which sites were most directly impacted by the various hurricanes that passed through the study area. The result of this buffer and intersection was the identification of two plots that were directly in a hurricane’s path. Using the average Diameter at Breast Height (DBH) for each species I visualized the change in these trees over time. 
+
+# Conclusions:
+
+For both directly impacted plots the species Laguncularia racemosa and Rhizophora mangle had increasing average DBH over time indicating that the trees were still thriving despite being in the direct line of a hurricane. Looking at the species make-up bar charts for both of these plots supports this idea because both species are observed to have a general increase in the number of individuals. On the other hand, the species Avicennia germinans, in Plot BRM, had a sharp decline then continued to have a slow decline in average DBH indicating the loss of some larger individuals early in the study period and then a continued struggle to grow and the loss of more individuals as the study period progressed. This is reflected in the bar chart of species make-up for this plot, the bar for the first year has a larger portion of Avicennia germinans than any of the following years’ bars. These limited findings indicate that there is merit in using past changes in species make-up and changes in traits such as DBH to understand which species of mangroves fare better in hurricane zones. This research can be further expanded by looking at more traits such as stem breakage of the trees identified here to see if these conclusions are consistent across multiple assessment criteria. 
+
+# References:
+
+Anderson, B. (2024). Geanders/hurricaneexposuredata \[R\]. https://github.com/geanders/hurricaneexposuredata (Original work published 2016)
+
+Bivand, R., Nowosad, J., Lovelace, R., Mimis, A., dataset), M. M. (author of the state vbm, & dataset), G. S. (author of the state vbm. (2024). spData: Datasets for Spatial Analysis (Version 2.3.3) \[Computer software\]. https://cran.r-project.org/web/packages/spData/index.html
+
+Doyle, T. W., Smith, T. J., & Robblee, M. B. (1995). Wind Damage Effects of Hurricane Andrew on Mangrove Communities Along the Southwest Coast of Florida, USA. Journal of Coastal Research, 159–168.
+
+geanders/hurricaneexposure: Functions to Create County-level Time Series of Hurricane Exposure. (n.d.). Retrieved December 12, 2024, from https://github.com/geanders/hurricaneexposure
+
+Laura C Feher, Thomas J. Smith III, Gordon H Anderson, Ginger Tiling-Range, Karen M. Balentine, Greg A Ward, Kevin R. T. Whelan, Christa L. Walker, Andre Daniels, Michael J Osland, & Fara S. Ilami. (n.d.). Everglades mangrove vegetation data from 23 long-term plots (1992-2011) \[Dataset\]. U.S. Geological Survey. https://doi.org/10.5066/P13DONMU
+
+Smith III, T. J., Anderson, G., Balentine, K., Tiling, G., Ward, G., & Whelan, K. (2009). Cumulative Impacts of Hurricanes on Florida Mangrove Ecosystems: Sediment Deposition, Storm Surges and Vegetation. Wetlands, 29, 24–34. https://doi.org/10.1672/08-40.1
