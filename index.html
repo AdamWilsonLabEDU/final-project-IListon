@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Isabel Liston">
-<meta name="dcterms.date" content="2024-12-10">
+<meta name="dcterms.date" content="2024-12-13">
 
 <title>Visualizing the impact of hurricanes on mangroves over time – GEO511_FinalProject</title>
 <style>
@@ -112,6 +112,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
 <link href="site_libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet">
 <script src="site_libs/leaflet-binding-2.2.2/leaflet.js"></script>
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
 
 
 </head>
@@ -171,7 +173,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">December 10, 2024</p>
+      <p class="date">December 13, 2024</p>
     </div>
   </div>
   
@@ -185,13 +187,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1">
 <h1>Introduction:</h1>
-<p>Mangrove trees are a very important aspect of many coastal ecosystems. Many of these areas are also impacted by hurricanes, therefore it is beneficial to understand how hurricanes damage mangrove trees and how long it takes trees to recover from said damage. Following Hurricane Andrew in 1992 permanent study plots were established, then more were added to examine historic areas of study. In total there are 23 plots with data spanning 1992-2011. The goal of this project is to visualize many different aspects of how individual mangroves, different mangrove species and the plots overall respond to hurricanes over time.</p>
+<p>Mangrove trees are an important aspect of many coastal ecosystems. Often, these areas are also impacted by hurricanes, therefore it is beneficial to understand how hurricanes damage mangrove trees and how long it takes trees to recover from said damage. Hurricanes impact mangroves through “…three primary mechanisms: wind damage, storm surges, and sediment deposition” (Smith III et al., 2009, p.&nbsp;24). The wind can damage the trunk, branches and leaves, the storm surges can uproot or knock over the mangrove tree, finally, “…deposited materials interfere with root and soil gas exchange leading to eventual death of the trees (Smith III et al., 2009, p.&nbsp;24). With knowledge of how hurricanes impact mangroves, we can look towards quantifying the response of mangrove forests to these impacts. To do this, mangroves must be studied over time and at different areas within a hurricane’s impact area. This leads us to the data set used in this project, following Hurricane Andrew in 1992 permanent study plots were established in the Everglades region of southern Florida. More were added later to compare modern observations to historic measurements, in total there are twenty-three plots with data spanning 1992-2011. The goal of this project is to visualize various aspects of how individual mangroves, different mangrove species and the plots overall respond to hurricanes over time.</p>
 </section>
 <section id="materials-and-methods" class="level1">
 <h1>Materials and Methods:</h1>
-<section id="load-libraries" class="level2">
-<h2 class="anchored" data-anchor-id="load-libraries">Load libraries</h2>
+<section id="data-sources" class="level2">
+<h2 class="anchored" data-anchor-id="data-sources">Data Sources</h2>
+<ul>
+<li>United States Geological Survey’s Wetland and Aquatic Research Center
+<ul>
+<li><a href="https://doi.org/10.5066/P13DONMU" class="uri">https://doi.org/10.5066/P13DONMU</a></li>
+</ul></li>
+<li>The hurricaneexposure and hurricaneexposuredata packages
+<ul>
+<li><a href="https://github.com/geanders/hurricaneexposure" class="uri">https://github.com/geanders/hurricaneexposure</a></li>
+<li><a href="https://github.com/geanders/hurricaneexposuredata" class="uri">https://github.com/geanders/hurricaneexposuredata</a></li>
+</ul></li>
+<li>The spData Package
+<ul>
+<li><a href="https://cran.r-project.org/package=spData" class="uri">https://cran.r-project.org/package=spData</a></li>
+</ul></li>
+</ul>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<p>To begin this project, I loaded all the necessary libraries, listed below, and imported the data sets. I then set up the study area using a bounding box, cropped the us_states data using this bounding box to get a polygon of the study area and filtered the us_states data to just the state of Florida for a scope of reference. For the Everglades Mangrove Data, I removed the “NA” values for DBH, grouped by Plot ID, reformatted the date to be compatible with R, arranged in date order then transformed the dataframe into a spatial object for mapping purposes. I also used the distinct() function to make a list of the 23 plots with their unique IDs, their sitename and their geometry. Finally, I mapped the tracks of the hurricanes that passed through the study area between 1992 and 2011 using the hurricane exposure package. I extracted the point information of the hurricane tracks and converted it to a spatial object. I then cropped this down to Florida and further cropped it to just the study area.</p>
+<section id="load-libraries" class="level3">
+<h3 class="anchored" data-anchor-id="load-libraries">Load libraries</h3>
 <div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
@@ -210,83 +235,140 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(grid)</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtable)</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(png)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(png)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"kableExtra"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># Downloading packages -------------------------------------------------------
+- Downloading kableExtra from CRAN ...          OK [2 Mb in 0.28s]
+- Downloading svglite from CRAN ...             OK [197.9 Kb in 0.33s]
+Successfully downloaded 2 packages in 1.6 seconds.
+
+The following package(s) will be installed:
+- kableExtra [1.4.0]
+- svglite    [2.1.3]
+These packages will be installed into "~/work/final-project-IListon/final-project-IListon/renv/library/linux-ubuntu-jammy/R-4.4/x86_64-pc-linux-gnu".
+
+# Installing packages --------------------------------------------------------
+- Installing svglite ...                        OK [installed binary and cached in 0.3s]
+- Installing kableExtra ...                     OK [installed binary and cached in 0.48s]
+Successfully installed 2 packages in 0.85 seconds.</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kableExtra)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
 </section>
-<section id="load-data" class="level2">
-<h2 class="anchored" data-anchor-id="load-data">Load data</h2>
+<section id="load-data" class="level3">
+<h3 class="anchored" data-anchor-id="load-data">Load data</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"us_states"</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"hurr_tracks"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>EVG_raw_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/Everglades_Mangrove_Vegetation_plot_data.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"us_states"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"hurr_tracks"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>EVG_raw_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/Everglades_Mangrove_Vegetation_plot_data.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
 </section>
-<section id="clean-up-data" class="level2">
-<h2 class="anchored" data-anchor-id="clean-up-data">Clean up data</h2>
+<section id="clean-up-data" class="level3">
+<h3 class="anchored" data-anchor-id="clean-up-data">Clean up data</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#create the study area bounding box</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>bbox_coords <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">81.2133</span>, <span class="fl">25.5831</span>,<span class="sc">-</span><span class="fl">80.9134</span>, <span class="fl">25.1589</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#create a polygon from the bounding box</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>bbox_polygon <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">st_sfc</span>(<span class="fu">st_polygon</span>(<span class="fu">list</span>(<span class="fu">matrix</span>(<span class="fu">c</span>(</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">2</span>],  </span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">3</span>], bbox_coords[<span class="dv">2</span>],</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">3</span>], bbox_coords[<span class="dv">4</span>],  </span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">4</span>],</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">2</span>]   </span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>), <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>))), <span class="at">crs =</span> <span class="dv">4269</span>))</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>study_crs <span class="ot">&lt;-</span> <span class="fu">st_crs</span>(bbox_polygon)</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>FL_state <span class="ot">&lt;-</span> <span class="fu">filter</span>(us_states, NAME <span class="sc">==</span> <span class="st">"Florida"</span>)</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>study_area <span class="ot">&lt;-</span> <span class="fu">st_crop</span>(us_states, bbox_polygon)</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>EVG_tidy <span class="ot">&lt;-</span> EVG_raw_data <span class="sc">%&gt;%</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>              <span class="fu">subset</span>(dbh_cm <span class="sc">!=</span> <span class="st">"NA"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>              <span class="fu">group_by</span>(plot_ID) <span class="sc">%&gt;%</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>              <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">"date"</span>), <span class="sc">~</span> <span class="fu">mdy</span>(.))) <span class="sc">%&gt;%</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>              <span class="fu">arrange</span>(., date)</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>              </span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>EVG_tidy_spat <span class="ot">&lt;-</span> EVG_tidy <span class="sc">%&gt;%</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>), </span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>                           <span class="at">crs =</span> study_crs)</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>EVG_plots <span class="ot">&lt;-</span> EVG_tidy_spat <span class="sc">%&gt;%</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>              <span class="fu">distinct</span>(plot_ID, geometry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#create the study area bounding box</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>bbox_coords <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">81.2133</span>, <span class="fl">25.5831</span>,<span class="sc">-</span><span class="fl">80.9134</span>, <span class="fl">25.1589</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#create a polygon from the bounding box</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>bbox_polygon <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">st_sfc</span>(<span class="fu">st_polygon</span>(<span class="fu">list</span>(<span class="fu">matrix</span>(<span class="fu">c</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">2</span>],  </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">3</span>], bbox_coords[<span class="dv">2</span>],</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">3</span>], bbox_coords[<span class="dv">4</span>],  </span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">4</span>],</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>   bbox_coords[<span class="dv">1</span>], bbox_coords[<span class="dv">2</span>]   </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>), <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>))), <span class="at">crs =</span> <span class="dv">4269</span>)) <span class="co">#used EPSG 4269 to match us_states </span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">#set the study coordinate reference system</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>study_crs <span class="ot">&lt;-</span> <span class="fu">st_crs</span>(bbox_polygon)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#create the study area polygon </span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>study_area <span class="ot">&lt;-</span> <span class="fu">st_crop</span>(us_states, bbox_polygon)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#filter the "us_states" data to just Florida</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>FL_state <span class="ot">&lt;-</span> <span class="fu">filter</span>(us_states, NAME <span class="sc">==</span> <span class="st">"Florida"</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#tidy everglades mangrove data</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>EVG_tidy <span class="ot">&lt;-</span> EVG_raw_data <span class="sc">%&gt;%</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>              <span class="fu">subset</span>(dbh_cm <span class="sc">!=</span> <span class="st">"NA"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>              <span class="fu">group_by</span>(plot_ID) <span class="sc">%&gt;%</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>              <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">"date"</span>), <span class="sc">~</span> <span class="fu">mdy</span>(.))) <span class="sc">%&gt;%</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>              <span class="fu">arrange</span>(., date)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co">#convert tidies mangrove data into an st object             </span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>EVG_tidy_spat <span class="ot">&lt;-</span> EVG_tidy <span class="sc">%&gt;%</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>), </span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>                           <span class="at">crs =</span> study_crs)</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co">#gather the distinct values of plot_ID, site name and geometry</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>EVG_plots <span class="ot">&lt;-</span> EVG_tidy_spat <span class="sc">%&gt;%</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>              <span class="fu">distinct</span>(plot_ID, site, geometry)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co">#map_tracks for the hurricanes passing through the study area </span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>hurr_paths <span class="ot">&lt;-</span> <span class="fu">map_tracks</span>(<span class="at">storms =</span> <span class="fu">c</span>(<span class="st">"Andrew-1992"</span>,<span class="st">"Irene-1999"</span>,</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>                                    <span class="st">"Katrina-2005"</span>))</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="co">#extract the specific point data from the hurr_paths object,</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="co">#convert it into a st object, and crop it to fit the state of Florida</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>hurr_paths_spat <span class="ot">&lt;-</span> hurr_paths[[<span class="st">"layers"</span>]][[<span class="dv">2</span>]][[<span class="st">"data"</span>]] <span class="sc">%&gt;%</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">st_as_sf</span>(.,<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>), </span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>                              <span class="at">crs =</span> study_crs) <span class="sc">%&gt;%</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">st_crop</span>(.,FL_state)</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co">#crop hurr_paths to just the study area</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>study_area_hurr_paths <span class="ot">&lt;-</span> <span class="fu">st_crop</span>(hurr_paths_spat, study_area)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
+</section>
 </section>
 </section>
 <section id="results" class="level1">
 <h1>Results:</h1>
-<section id="plot-spatial-distribution-of-study-plots" class="level2">
-<h2 class="anchored" data-anchor-id="plot-spatial-distribution-of-study-plots">Plot spatial distribution of study plots</h2>
+<section id="map-the-spatial-distribution-of-study-plots" class="level2">
+<h2 class="anchored" data-anchor-id="map-the-spatial-distribution-of-study-plots">Map the spatial distribution of study plots</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>plot_dist <span class="ot">&lt;-</span> <span class="fu">leaflet</span>(EVG_tidy_spat)<span class="sc">%&gt;%</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                <span class="fu">addTiles</span>()<span class="sc">%&gt;%</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                <span class="fu">fitBounds</span>(., <span class="at">lng1 =</span> <span class="sc">-</span><span class="fl">81.2133</span>, <span class="at">lat1 =</span> <span class="fl">25.5831</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">lng2 =</span> <span class="sc">-</span><span class="fl">80.9134</span>, <span class="at">lat2 =</span> <span class="fl">25.1589</span>)<span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                <span class="fu">addMarkers</span>(<span class="at">data =</span> EVG_plots)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>plot_dist    </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>plot_dist <span class="ot">&lt;-</span> <span class="fu">leaflet</span>(EVG_tidy_spat)<span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>                <span class="fu">addTiles</span>()<span class="sc">%&gt;%</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                <span class="fu">fitBounds</span>(., <span class="at">lng1 =</span> <span class="sc">-</span><span class="fl">81.2133</span>, <span class="at">lat1 =</span> <span class="fl">25.5831</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">lng2 =</span> <span class="sc">-</span><span class="fl">80.9134</span>, <span class="at">lat2 =</span> <span class="fl">25.1589</span>)<span class="sc">%&gt;%</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                <span class="fu">addMarkers</span>(<span class="at">data =</span> EVG_plots, <span class="at">popup =</span> EVG_plots<span class="sc">$</span>site)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>plot_dist    </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
-<div class="leaflet html-widget html-fill-item" id="htmlwidget-3cdec30227e58c5d1607" style="width:100%;height:464px;"></div>
-<script type="application/json" data-for="htmlwidget-3cdec30227e58c5d1607">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"https://openstreetmap.org/copyright/\">OpenStreetMap<\/a>,  <a href=\"https://opendatacommons.org/licenses/odbl/\">ODbL<\/a>"}]},{"method":"addMarkers","args":[[25.51167,25.53923,25.54267,25.493,25.55267,25.58312,25.36398,25.36422,25.4234,25.4236,25.15894,25.16,25.47245,25.42156,25.42157,25.42193,25.42212,25.42246,25.42262,25.42309,25.42324,25.409964,25.41017],[-81.209,-81.18418,-81.20083,-81.0945,-81.21329,-81.14164,-81.07876,-81.07821,-81.06075,-81.06019999999999,-80.91369,-80.91339000000001,-80.97714999999999,-81.05992999999999,-81.05970000000001,-81.06019000000001,-81.05992999999999,-81.06059,-81.06023999999999,-81.06086999999999,-81.06026,-80.96334,-80.96329],null,null,null,{"interactive":true,"draggable":false,"keyboard":true,"title":"","alt":"","zIndexOffset":0,"opacity":1,"riseOnHover":false,"riseOffset":250},null,null,null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]}],"fitBounds":[25.5831,-81.2133,25.1589,-80.9134,[]],"limits":{"lat":[25.15894,25.58312],"lng":[-81.21329,-80.91339000000001]}},"evals":[],"jsHooks":[]}</script>
+<div class="leaflet html-widget html-fill-item" id="htmlwidget-6eac45e3c5acdad09bac" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-6eac45e3c5acdad09bac">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"https://openstreetmap.org/copyright/\">OpenStreetMap<\/a>,  <a href=\"https://opendatacommons.org/licenses/odbl/\">ODbL<\/a>"}]},{"method":"addMarkers","args":[[25.51167,25.53923,25.54267,25.493,25.55267,25.58312,25.36398,25.36422,25.4234,25.4236,25.15894,25.16,25.47245,25.42156,25.42157,25.42193,25.42212,25.42246,25.42262,25.42309,25.42324,25.409964,25.41017],[-81.209,-81.18418,-81.20083,-81.0945,-81.21329,-81.14164,-81.07876,-81.07821,-81.06075,-81.06019999999999,-80.91369,-80.91339000000001,-80.97714999999999,-81.05992999999999,-81.05970000000001,-81.06019000000001,-81.05992999999999,-81.06059,-81.06023999999999,-81.06086999999999,-81.06026,-80.96334,-80.96329],null,null,null,{"interactive":true,"draggable":false,"keyboard":true,"title":"","alt":"","zIndexOffset":0,"opacity":1,"riseOnHover":false,"riseOffset":250},["Lostmans River","Lostmans River","Lostmans River","Broad River","Lostmans River","Lostmans River","Shark River 3","Shark River 3","Shark River 4","Shark River 4","Black Forest","Black Forest","Broad River","Shark River 5","Shark River 5","Harney River Transect","Harney River Transect","Harney River Transect","Harney River Transect","Harney River Transect","Harney River Transect","Shark River 2","Shark River 2"],null,null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]}],"fitBounds":[25.5831,-81.2133,25.1589,-80.9134,[]],"limits":{"lat":[25.15894,25.58312],"lng":[-81.21329,-80.91339000000001]}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </section>
 <section id="plot-hurricane-tracks-passing-through-the-study-area-between-1992-2011" class="level2">
 <h2 class="anchored" data-anchor-id="plot-hurricane-tracks-passing-through-the-study-area-between-1992-2011">Plot hurricane tracks passing through the study area between 1992-2011</h2>
+</section>
+<section id="plot-the-path-of-hurricanes-in-the-context-of-the-study-area-and-plots" class="level2">
+<h2 class="anchored" data-anchor-id="plot-the-path-of-hurricanes-in-the-context-of-the-study-area-and-plots">Plot the path of hurricanes in the context of the study area and plots</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hurr_paths <span class="ot">&lt;-</span> <span class="fu">map_tracks</span>(<span class="at">storms =</span> <span class="fu">c</span>(<span class="st">"Andrew-1992"</span>,<span class="st">"Irene-1999"</span>,</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                                    <span class="st">"Katrina-2005"</span>, <span class="st">"Wilma-2005"</span>))</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>hurr_paths_spat <span class="ot">&lt;-</span> hurr_paths[[<span class="st">"layers"</span>]][[<span class="dv">2</span>]][[<span class="st">"data"</span>]] <span class="sc">%&gt;%</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">st_as_sf</span>(.,<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>), </span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                              <span class="at">crs =</span> <span class="dv">4269</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">st_crop</span>(.,FL_state)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> FL_state) <span class="sc">+</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area, <span class="at">fill =</span> <span class="st">"green"</span>)<span class="sc">+</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> hurr_paths_spat, <span class="fu">aes</span>(<span class="at">color =</span> storm_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#make a map showing Florida, the study area and the hurricane paths</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>state_view <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>                <span class="fu">geom_sf</span>(<span class="at">data =</span> FL_state) <span class="sc">+</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>                <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area, <span class="at">fill =</span> <span class="st">"green"</span>)<span class="sc">+</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>                <span class="fu">geom_sf</span>(<span class="at">data =</span> hurr_paths_spat, <span class="fu">aes</span>(<span class="at">color =</span> storm_id))<span class="sc">+</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Florida with the Study Area and Hurricane Paths"</span>, </span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">color =</span> <span class="st">"Storm ID"</span>)<span class="sc">+</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>                <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>state_view</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -296,42 +378,271 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>sites <span class="ot">&lt;-</span> <span class="fu">factor</span>(EVG_tidy<span class="sc">$</span>plot_ID)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>cl <span class="ot">&lt;-</span> <span class="fu">makeCluster</span>(<span class="dv">4</span>)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">registerDoParallel</span>(cl)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">foreach</span>(<span class="at">i =</span> <span class="fu">levels</span>(sites), </span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">.packages =</span> <span class="fu">c</span>(<span class="st">"dplyr"</span>, <span class="st">"ggplot2"</span>),</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">.combine =</span> <span class="st">"rbind"</span>) <span class="sc">%dopar%</span> {</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                  plot_makeup <span class="ot">&lt;-</span> EVG_tidy <span class="sc">%&gt;%</span> </span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                                  <span class="fu">filter</span>(plot_ID <span class="sc">==</span> i) <span class="sc">%&gt;%</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>                                  <span class="fu">group_by</span>(.,plot_ID, date, scientific_name) <span class="sc">%&gt;%</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>                                  <span class="fu">summarize</span>(<span class="at">individual_count =</span> <span class="fu">n</span>())</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>                  </span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                  bar_chart <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plot_makeup, </span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                                    <span class="fu">aes</span>(<span class="at">fill=</span> scientific_name, </span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">y =</span> individual_count, </span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">x =</span> date)) <span class="sc">+</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>                                    <span class="fu">geom_bar</span>(<span class="at">position=</span><span class="st">"fill"</span>, <span class="at">stat =</span> <span class="st">"identity"</span>)<span class="sc">+</span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>                                    <span class="fu">ggtitle</span>(<span class="fu">paste</span>(<span class="st">"Plot"</span>, i))</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>                     </span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">ggsave</span>(<span class="at">filename =</span> <span class="fu">paste</span>(<span class="st">"plot_"</span>, i, <span class="st">".png"</span>, <span class="at">sep =</span> <span class="st">""</span>), </span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>                           <span class="at">plot =</span> bar_chart)}</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="fu">stopCluster</span>(cl)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#make a map showing the study area, cropped hurricane paths and study plots  </span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>study_area_view <span class="ot">&lt;-</span> <span class="fu">ggplot</span>()<span class="sc">+</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area)<span class="sc">+</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area_hurr_paths, <span class="fu">aes</span>(<span class="at">color =</span> storm_id))<span class="sc">+</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">geom_sf</span>(<span class="at">data =</span> EVG_plots, <span class="at">shape =</span> <span class="dv">15</span>)<span class="sc">+</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">270</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>                                                     <span class="at">hjust=</span><span class="dv">1</span>))<span class="sc">+</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Study Area with Hurricane Paths and Study Plots"</span>, </span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>                         <span class="at">color =</span> <span class="st">"Storm ID"</span>)<span class="sc">+</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>study_area_view</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
+</div>
+</div>
+</section>
+<section id="plot-species-make-up-of-each-plot-over-time" class="level2">
+<h2 class="anchored" data-anchor-id="plot-species-make-up-of-each-plot-over-time">Plot species make up of each plot over time</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#make a cluster and register it for parallel processing</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>cl <span class="ot">&lt;-</span> <span class="fu">makeCluster</span>(<span class="dv">4</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">registerDoParallel</span>(cl)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">#factor plots for use in foreach loop</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>sites <span class="ot">&lt;-</span> <span class="fu">factor</span>(EVG_tidy<span class="sc">$</span>plot_ID)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">#create foreach loop that calculates plot make-up, </span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">#then makes and saves a bar chart </span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">#representing the quantity fo each species overtime</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>plot_makeup_list <span class="ot">&lt;-</span> <span class="fu">foreach</span>(<span class="at">i =</span> <span class="fu">levels</span>(sites), </span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">.packages =</span> <span class="fu">c</span>(<span class="st">"dplyr"</span>, <span class="st">"ggplot2"</span>)) <span class="sc">%dopar%</span> {</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>                  plot_makeup <span class="ot">&lt;-</span> EVG_tidy <span class="sc">%&gt;%</span> </span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>                                 <span class="fu">filter</span>(plot_ID <span class="sc">==</span> i) <span class="sc">%&gt;%</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>                                 <span class="fu">group_by</span>(plot_ID, date, scientific_name) <span class="sc">%&gt;%</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>                                 <span class="fu">summarize</span>(<span class="at">individual_count =</span> <span class="fu">n</span>(), </span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>                  bar_chart <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plot_makeup, </span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>                                      <span class="fu">aes</span>(<span class="at">fill =</span> scientific_name, </span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">y =</span> individual_count, </span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">x =</span> date)) <span class="sc">+</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>, </span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">stat =</span> <span class="st">"identity"</span>)<span class="sc">+</span> </span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Date"</span>, <span class="at">y =</span> <span class="st">"Proportion of Species"</span>, </span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">fill =</span> <span class="st">"Scientific Name"</span>) <span class="sc">+</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">ggtitle</span>(<span class="fu">paste</span>(<span class="st">"Plot"</span>, i))<span class="sc">+</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                   file_name <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"plot_"</span>, i, <span class="st">".png"</span>, <span class="at">sep =</span> <span class="st">""</span>)</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">ggsave</span>(<span class="at">filename =</span> file_name, <span class="at">plot =</span> bar_chart, </span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>                          <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">8</span>, <span class="at">units =</span> <span class="st">"in"</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">return</span>(file_name)}</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="fu">stopCluster</span>(cl)</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="co">#convert saved .png files to graphic objects (grobs) for use with grid.arrange</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>grob_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(plot_makeup_list, <span class="cf">function</span>(file_name) {</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>  img <span class="ot">&lt;-</span> <span class="fu">readPNG</span>(file_name)        </span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>  raster_grob <span class="ot">&lt;-</span> <span class="fu">rasterGrob</span>(img)   </span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(raster_grob)})</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="co">#arrange grobs in a grid and save image </span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>all_plots <span class="ot">&lt;-</span> <span class="fu">grid.arrange</span>(<span class="at">grobs =</span> grob_list, <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">nrow =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">filename =</span> <span class="st">"all_plots.png"</span>, <span class="at">plot =</span> all_plots, </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">20</span>, <span class="at">height =</span> <span class="dv">15</span>, <span class="at">units =</span> <span class="st">"in"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="find-and-visualize-the-directly-impacted-plotplots" class="level2">
+<h2 class="anchored" data-anchor-id="find-and-visualize-the-directly-impacted-plotplots">Find and visualize the directly impacted plot/plots</h2>
+<section id="find-the-plot-plots-that-fall-in-the-direct-line-of-a-hurricane" class="level3">
+<h3 class="anchored" data-anchor-id="find-the-plot-plots-that-fall-in-the-direct-line-of-a-hurricane">Find the plot/ plots that fall in the direct line of a hurricane</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform to a projected coordinate system (NAD83 / UTM Zone 17N)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>EVG_plots_trans <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(EVG_plots, <span class="at">crs =</span> <span class="dv">32617</span>) </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>study_area_hurr_paths_trans<span class="ot">&lt;-</span> <span class="fu">st_transform</span>(study_area_hurr_paths, <span class="at">crs =</span> <span class="dv">32617</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>study_area_trans <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(study_area, <span class="at">crs =</span> <span class="dv">32617</span>) </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Create buffer for EVG_plots and hurr_paths (1 mile = 1609.34 meters)</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>EVG_plots_buffer <span class="ot">&lt;-</span> <span class="fu">st_buffer</span>(EVG_plots_trans, <span class="at">dist =</span> (<span class="fl">1609.34</span><span class="sc">*</span><span class="fl">0.5</span>))</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>study_area_hurr_paths_buffer <span class="ot">&lt;-</span> <span class="fu">st_buffer</span>(study_area_hurr_paths_trans, </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">dist =</span> (<span class="fl">1609.34</span>))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the intersection of the buffers</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>overlap <span class="ot">&lt;-</span> <span class="fu">st_intersection</span>(EVG_plots_buffer, study_area_hurr_paths_buffer)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>overlap_table<span class="ot">&lt;-</span>overlap <span class="sc">%&gt;%</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                  st_drop_geometry<span class="sc">%&gt;%</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">kbl</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">kable_minimal</span>()</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>overlap_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-minimal caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">plot_ID</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">site</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">storm_id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">date</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">BRU</td>
+<td style="text-align: left;">Broad River</td>
+<td style="text-align: left;">Irene-1999</td>
+<td style="text-align: left;">1999-10-15 21:00:00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BRM</td>
+<td style="text-align: left;">Broad River</td>
+<td style="text-align: left;">Katrina-2005</td>
+<td style="text-align: left;">2005-08-26 04:45:00</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Visualize the intersection</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>()<span class="sc">+</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area_trans)<span class="sc">+</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area_hurr_paths_buffer, <span class="fu">aes</span>(<span class="at">color =</span> storm_id))<span class="sc">+</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> study_area_hurr_paths_trans, <span class="fu">aes</span>(<span class="at">color =</span> storm_id))<span class="sc">+</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> EVG_plots_buffer, <span class="fu">aes</span>(<span class="at">fill =</span> site))<span class="sc">+</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> overlap, <span class="fu">aes</span>(<span class="at">fill =</span> site), <span class="at">color=</span> <span class="st">"yellow"</span>)<span class="sc">+</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Intersection of Study Plots and Hurricane Paths"</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">"Site Name"</span>, <span class="at">color =</span> <span class="st">"Storm ID"</span>,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">caption =</span> <span class="st">"Study Plots have a 1/2 mile Buffer, Hurricane Paths have a 1 mile Buffer"</span>)<span class="sc">+</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">270</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, <span class="at">hjust=</span><span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="plot-the-average-dbh-of-each-species-in-the-impacted-plotplots-over-time" class="level3">
+<h3 class="anchored" data-anchor-id="plot-the-average-dbh-of-each-species-in-the-impacted-plotplots-over-time">Plot the average DBH of each species in the impacted plot/plots over time</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#filter the mangrove data based on the overlap results, </span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#the first overlap plot is BRU</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>plot_BRU <span class="ot">&lt;-</span> EVG_tidy_spat <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>              <span class="fu">filter</span>(plot_ID <span class="sc">==</span> <span class="st">"BRU"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>              <span class="fu">subset</span>(status <span class="sc">!=</span> <span class="st">"dead"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>              <span class="fu">group_by</span>(date, scientific_name) <span class="sc">%&gt;%</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>              <span class="fu">mutate</span>(<span class="st">"avg_species_dbh_cm"</span> <span class="ot">=</span> <span class="fu">mean</span>(dbh_cm)) <span class="co">#averaged to minimize </span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>                                                          <span class="co">#visual noise</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">#plot the change in average Diameter at Breast Height (DBH) for each species over time</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(plot_BRU) <span class="sc">+</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> avg_species_dbh_cm, <span class="at">color =</span> scientific_name)) <span class="sc">+</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> avg_species_dbh_cm, <span class="at">color =</span> scientific_name, </span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">group =</span> scientific_name)) <span class="sc">+</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"1999-10-15"</span>), <span class="at">color =</span> <span class="st">"gray"</span>, </span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,<span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"1999-10-15"</span>), <span class="at">y =</span> <span class="dv">0</span>, </span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>            <span class="at">label =</span> <span class="st">"Hurricane Irene"</span>, </span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"black"</span>)<span class="sc">+</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Change in Average DBH per Species in Plot BRU"</span>, </span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Date"</span>, <span class="at">y =</span> <span class="st">"Average DBH in cm"</span>, <span class="at">color =</span> <span class="st">"Scientific Name"</span>)<span class="sc">+</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))<span class="sc">+</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#filter the mangrove data based on the overlap results again,</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#the second overlap plot is BRM</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>plot_BRM <span class="ot">&lt;-</span> EVG_tidy_spat <span class="sc">%&gt;%</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>               <span class="fu">filter</span>(plot_ID <span class="sc">==</span> <span class="st">"BRM"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>               <span class="fu">subset</span>(status <span class="sc">!=</span> <span class="st">"dead"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>               <span class="fu">group_by</span>(date, scientific_name) <span class="sc">%&gt;%</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>               <span class="fu">mutate</span>(<span class="st">"avg_species_dbh_cm"</span> <span class="ot">=</span> <span class="fu">mean</span>(dbh_cm))</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co">#plot the change in average DBH for each species over time  </span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(plot_BRM) <span class="sc">+</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> avg_species_dbh_cm, <span class="at">color =</span> scientific_name)) <span class="sc">+</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> avg_species_dbh_cm, <span class="at">color =</span> scientific_name, </span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">group =</span> scientific_name)) <span class="sc">+</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>   <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"1999-10-15"</span>), <span class="at">color =</span> <span class="st">"gray"</span>, </span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,<span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"1999-10-15"</span>), <span class="at">y =</span> <span class="dv">0</span>, </span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>            <span class="at">label =</span> <span class="st">"Hurricane Irene"</span>, </span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"black"</span>)<span class="sc">+</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2005-08-26"</span>), <span class="at">color =</span> <span class="st">"gray"</span>, </span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,<span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2005-08-26"</span>), <span class="at">y =</span> <span class="dv">0</span>, </span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>            <span class="at">label =</span> <span class="st">"Hurricane Katrina"</span>, </span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"black"</span>)<span class="sc">+</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlim</span>(<span class="fu">min</span>(plot_BRM<span class="sc">$</span>date), <span class="fu">max</span>(plot_BRM<span class="sc">$</span>date) <span class="sc">+</span> <span class="dv">365</span>) <span class="sc">+</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Change in Average DBH per Species in Plot BRM"</span>, </span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Date"</span>, <span class="at">y =</span> <span class="st">"Average DBH in cm"</span>, <span class="at">color =</span> <span class="st">"Scientific Name"</span>)<span class="sc">+</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))<span class="sc">+</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="results-text" class="level2">
+<h2 class="anchored" data-anchor-id="results-text">Results (Text):</h2>
+<p>Through this project I was able to plot the location of the twenty-three permanent plots in the context of the state of Florida in an interactive map. Using a static map, I visualized the study area within the state of Florida and the various hurricanes that have passed through the area of interest during the period of study. I also made a map of the plots within the study area and the hurricane paths at that scale. Furthermore, I used bar charts that had the proportion of each species observed on each study date to visualize the species make-up of each plot over time. These plots are useful for understanding which species thrive at different hurricane exposure levels and for comparing how the species make-up changes through time. Using a buffer I was able to determine which sites were most directly impacted by the various hurricanes that passed through the study area. The result of this buffer and intersection was the identification of two plots that were directly in a hurricane’s path. Using the average Diameter at Breast Height (DBH) for each species I visualized the change in these trees over time.</p>
 </section>
 </section>
 <section id="conclusions" class="level1">
 <h1>Conclusions:</h1>
-<p>[~200 words]</p>
-<p>Clear summary adequately describing the results and putting them in context. Discussion of further questions and ways to continue investigation.</p>
+<p>For both directly impacted plots the species Laguncularia racemosa and Rhizophora mangle had increasing average DBH over time indicating that the trees were still thriving despite being in the direct line of a hurricane. Looking at the species make-up bar charts for both of these plots supports this idea because both species are observed to have a general increase in the number of individuals. On the other hand, the species Avicennia germinans, in Plot BRM, had a sharp decline then continued to have a slow decline in average DBH indicating the loss of some larger individuals early in the study period and then a continued struggle to grow and the loss of more individuals as the study period progressed. This is reflected in the bar chart of species make-up for this plot, the bar for the first year has a larger portion of Avicennia germinans than any of the following years’ bars. These limited findings indicate that there is merit in using past changes in species make-up and changes in traits such as DBH to understand which species of mangroves fare better in hurricane zones. This research can be further expanded by looking at more traits such as stem breakage of the trees identified here to see if these conclusions are consistent across multiple assessment criteria.</p>
 </section>
 <section id="references" class="level1">
 <h1>References:</h1>
+<p>Anderson, B. (2024). Geanders/hurricaneexposuredata [R]. https://github.com/geanders/hurricaneexposuredata (Original work published 2016)</p>
+<p>Bivand, R., Nowosad, J., Lovelace, R., Mimis, A., dataset), M. M. (author of the state vbm, &amp; dataset), G. S. (author of the state vbm. (2024). spData: Datasets for Spatial Analysis (Version 2.3.3) [Computer software]. https://cran.r-project.org/web/packages/spData/index.html</p>
 <p>Doyle, T. W., Smith, T. J., &amp; Robblee, M. B. (1995). Wind Damage Effects of Hurricane Andrew on Mangrove Communities Along the Southwest Coast of Florida, USA. Journal of Coastal Research, 159–168.</p>
-<p>Laura C Feher, Thomas J. Smith III, Gordon H Anderson, Ginger Tiling-Range, Karen M. Balentine, Greg A Ward, Kevin R. T. Whelan, Christa L. Walker, Andre Daniels, Michael J Osland, &amp; Fara S. Ilami. (n.d.). Everglades mangrove vegetation data from 23 long-term plots (1992-2011). U.S. Geological Survey. https://doi.org/10.5066/P13DONMU</p>
+<p>geanders/hurricaneexposure: Functions to Create County-level Time Series of Hurricane Exposure. (n.d.). Retrieved December 12, 2024, from https://github.com/geanders/hurricaneexposure</p>
+<p>Laura C Feher, Thomas J. Smith III, Gordon H Anderson, Ginger Tiling-Range, Karen M. Balentine, Greg A Ward, Kevin R. T. Whelan, Christa L. Walker, Andre Daniels, Michael J Osland, &amp; Fara S. Ilami. (n.d.). Everglades mangrove vegetation data from 23 long-term plots (1992-2011) [Dataset]. U.S. Geological Survey. https://doi.org/10.5066/P13DONMU</p>
 <p>Smith III, T. J., Anderson, G., Balentine, K., Tiling, G., Ward, G., &amp; Whelan, K. (2009). Cumulative Impacts of Hurricanes on Florida Mangrove Ecosystems: Sediment Deposition, Storm Surges and Vegetation. Wetlands, 29, 24–34. https://doi.org/10.1672/08-40.1</p>
 
 
