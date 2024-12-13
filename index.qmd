@@ -31,7 +31,6 @@ To begin this project, I loaded all the necessary libraries, listed below, and i
 ### Load libraries
 
 ```{r, warning = FALSE, message = FALSE}
-library(quarto)
 library(readr)
 library(tidyverse)
 library(ggplot2)
