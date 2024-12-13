@@ -4,7 +4,7 @@ author: Isabel Liston
 date: today
 date-format: long
 format: 
-  html: 
+  html:
     code-fold: true
 ---
 
@@ -31,6 +31,7 @@ To begin this project, I loaded all the necessary libraries, listed below, and i
 ### Load libraries
 
 ```{r, warning = FALSE, message = FALSE}
+library(quarto)
 library(readr)
 library(tidyverse)
 library(ggplot2)
@@ -50,7 +51,6 @@ library(grid)
 library(gtable)
 library(gridExtra)
 library(png)
-install.packages("kableExtra")
 library(kableExtra)
 ```
 
@@ -122,15 +122,24 @@ study_area_hurr_paths <- st_crop(hurr_paths_spat, study_area)
 ## Map the spatial distribution of study plots
 
 ```{r, warning = FALSE, message = FALSE}
+if (knitr::is_html_output()) {
 plot_dist <- leaflet(EVG_tidy_spat)%>%
                 addTiles()%>%
                 fitBounds(., lng1 = -81.2133, lat1 = 25.5831,
                           lng2 = -80.9134, lat2 = 25.1589)%>%
                 addMarkers(data = EVG_plots, popup = EVG_plots$site)
-plot_dist    
+plot_dist
+} else {
+  plot_dist_static <- ggplot()+
+                    geom_sf(data = study_area)+
+                    geom_sf(data = EVG_plots, aes(color = plot_ID))+
+                    theme(axis.text.x = element_text(angle = 270, vjust = 0.5, 
+                                                     hjust=1))+
+                    labs(title = "Study Area with Study Plots", 
+                         color = "Plot ID")+
+                    theme(plot.title = element_text(hjust = 0.5))
+  plot_dist_static}
 ```
-
-## Plot hurricane tracks passing through the study area between 1992-2011
 
 ## Plot the path of hurricanes in the context of the study area and plots
 
