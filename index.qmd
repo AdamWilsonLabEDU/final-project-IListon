@@ -50,6 +50,7 @@ library(grid)
 library(gtable)
 library(gridExtra)
 library(png)
+install.packages("kableExtra")
 library(kableExtra)
 ```
 
